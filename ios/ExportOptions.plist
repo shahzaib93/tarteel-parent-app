@@ -5,7 +5,7 @@
   <key>method</key>
   <string>development</string>
   <key>teamID</key>
-  <string>TEAM_ID_PLACEHOLDER</string>
+  <string>U2398F926G</string>
   <key>uploadBitcode</key>
   <false/>
   <key>compileBitcode</key>
@@ -18,7 +18,7 @@
   <string>iPhone Developer</string>
   <key>provisioningProfiles</key>
   <dict>
-    <key>com.example.parentApp</key>
+    <key>com.tarteelequran.parent</key>
     <string>PROVISIONING_PROFILE_UUID_PLACEHOLDER</string>
   </dict>
 </dict>
