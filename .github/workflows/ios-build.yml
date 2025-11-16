@@ -85,8 +85,8 @@ jobs:
       - name: Update project signing settings
         if: env.PP_UUID != ''
         run: |
-          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = \"\"/PROVISIONING_PROFILE_SPECIFIER = \"$PP_UUID\"/g" ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' "s/PROVISIONING_PROFILE_UUID_PLACEHOLDER/$PP_UUID/g" ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' "s/PROVISIONING_PROFILE = PROVISIONING_PROFILE_UUID_PLACEHOLDER/PROVISIONING_PROFILE = $PP_UUID/g" ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = \"\"/PROVISIONING_PROFILE_SPECIFIER = \"\"/g" ios/Runner.xcodeproj/project.pbxproj
           sed -i '' "s/PROVISIONING_PROFILE_UUID_PLACEHOLDER/$PP_UUID/g" ios/ExportOptions.plist
 
       - name: Inject Apple Team ID
