@@ -95,6 +95,12 @@ jobs:
         env:
           IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
 
+      - name: Debug signing assets
+        run: |
+          echo "Profile UUID: $PP_UUID"
+          echo "Available code signing identities:" && security find-identity -v -p codesigning || true
+          echo "Profile embedded cert fingerprint:" && security cms -D -i "$HOME/Library/MobileDevice/Provisioning Profiles/$PP_UUID.mobileprovision" | openssl x509 -inform DER -fingerprint -noout || true
+
       - name: Build signed IPA
         run: |
           flutter build ipa --release \
