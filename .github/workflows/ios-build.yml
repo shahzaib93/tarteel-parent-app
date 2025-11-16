@@ -87,6 +87,7 @@ jobs:
         run: |
           sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = \"\"/PROVISIONING_PROFILE_SPECIFIER = \"$PP_UUID\"/g" ios/Runner.xcodeproj/project.pbxproj
           sed -i '' "s/PROVISIONING_PROFILE_UUID_PLACEHOLDER/$PP_UUID/g" ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' "s/PROVISIONING_PROFILE_NAME_PLACEHOLDER/$PP_NAME/g" ios/Runner.xcodeproj/project.pbxproj
           sed -i '' "s/PROVISIONING_PROFILE_UUID_PLACEHOLDER/$PP_UUID/g" ios/ExportOptions.plist
 
       - name: Inject Apple Team ID
