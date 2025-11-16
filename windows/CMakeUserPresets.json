@@ -1,0 +1,15 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "vs2026",
+      "displayName": "VS 2026 x64",
+      "generator": "Visual Studio 18 2026",
+      "binaryDir": "${sourceDir}/out/vs2026",
+      "cacheVariables": {
+        "CMAKE_SYSTEM_VERSION": "10.0",
+        "CMAKE_GENERATOR_PLATFORM": "x64"
+      }
+    }
+  ]
+}
