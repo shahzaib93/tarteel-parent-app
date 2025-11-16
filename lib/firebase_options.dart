@@ -14,12 +14,25 @@ class DefaultFirebaseOptions {
         return ios;
       case TargetPlatform.macOS:
         return macos;
+      case TargetPlatform.windows:
+        return windows;
+      case TargetPlatform.linux:
+        return windows; // Use same config as Windows
       default:
         throw UnsupportedError(
           'DefaultFirebaseOptions are not configured for this platform.',
         );
     }
   }
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyDrXbi2vqMua2jwvoEOsdEccUEGZAonIS4',
+    appId: '1:51402909238:web:c4160931526c345c7a9a97',
+    messagingSenderId: '51402909238',
+    projectId: 'tarteel-quran',
+    authDomain: 'tarteel-quran.firebaseapp.com',
+    storageBucket: 'tarteel-quran.firebasestorage.app',
+  );
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyDrXbi2vqMua2jwvoEOsdEccUEGZAonIS4',
