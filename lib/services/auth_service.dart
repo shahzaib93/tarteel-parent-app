@@ -1,10 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 class ParentAuthService with ChangeNotifier {
-  ParentAuthService({FirebaseAuth? auth}) : _auth = auth ?? FirebaseAuth.instance;
+  ParentAuthService({FirebaseAuth? auth, FirebaseFirestore? firestore})
+      : _auth = auth ?? FirebaseAuth.instance,
+        _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseAuth _auth;
+  final FirebaseFirestore _firestore;
   User? get currentUser => _auth.currentUser;
   bool get isLoggedIn => currentUser != null;
   String? _error;
@@ -18,7 +22,24 @@ class ParentAuthService with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      final credential = await _auth.signInWithEmailAndPassword(email: email, password: password);
+
+      final user = credential.user;
+      if (user == null) {
+        throw FirebaseAuthException(code: 'user-not-found', message: 'Unable to sign in');
+      }
+
+      final parentDoc = await _firestore.collection('users').doc(user.uid).get();
+      final role = parentDoc.data()?['role'];
+
+      if (role != 'parent') {
+        await _auth.signOut();
+        const errorMessage = 'This account is not registered as a parent';
+        _error = errorMessage;
+        _loading = false;
+        notifyListeners();
+        return {'success': false, 'error': errorMessage};
+      }
 
       _loading = false;
       notifyListeners();

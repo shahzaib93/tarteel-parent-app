@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/parent_service.dart';
 import '../services/alert_service.dart';
 import '../services/auth_service.dart';
 import '../services/call_service.dart';
 import '../services/announcement_service.dart';
+import '../services/webrtc_service.dart';
+import '../services/app_config_service.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/child_card.dart';
 import '../widgets/alert_card.dart';
 import '../widgets/active_call_banner.dart';
 import '../widgets/announcement_card.dart';
+import '../widgets/incoming_call_dialog.dart';
+import '../widgets/video_call_screen.dart';
 import 'child_detail_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -23,6 +28,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _initialized = false;
   int _selectedIndex = 0;
   _AlertFilter _alertFilter = _AlertFilter.active;
+  bool _callScreenOpen = false;
+  bool _incomingDialogVisible = false;
+  BuildContext? _incomingDialogContext;
+
+  void _closeIncomingDialog() {
+    if (!_incomingDialogVisible) {
+      return;
+    }
+    final dialogContext = _incomingDialogContext;
+    if (dialogContext != null) {
+      final navigator = Navigator.of(dialogContext, rootNavigator: true);
+      if (navigator.canPop()) {
+        navigator.pop();
+      }
+    }
+    _incomingDialogVisible = false;
+    _incomingDialogContext = null;
+  }
 
   @override
   void didChangeDependencies() {
@@ -34,6 +57,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final alertService = context.read<AlertService>();
         final callService = context.read<CallStatusService>();
         final announcementService = context.read<AnnouncementService>();
+        final webrtcService = context.read<WebRTCService>();
+        final appConfigService = context.read<AppConfigService>();
+        final authService = context.read<ParentAuthService>();
         () async {
           await parentService.loadChildren();
           if (!mounted) return;
@@ -42,6 +68,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (!mounted) return;
           callService.startListening();
           announcementService.loadAnnouncements();
+
+          // Initialize WebRTC service for incoming calls
+          final user = authService.currentUser;
+          if (user != null && mounted) {
+            // Get socket URL and TURN config from Firestore
+            final socketUrl = appConfigService.socketUrl;
+            final turnConfig = appConfigService.turnConfig;
+
+            if (turnConfig != null) {
+              webrtcService.configureTurnServer(turnConfig);
+            }
+
+            webrtcService.connect(
+              user.uid,
+              user.displayName ?? 'Parent',
+              socketUrl: socketUrl,
+            );
+          }
         }();
       });
     }
@@ -54,6 +98,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final alertsService = context.watch<AlertService>();
     final callsService = context.watch<CallStatusService>();
     final announcementService = context.watch<AnnouncementService>();
+    final webrtcService = context.watch<WebRTCService>();
+
+    if (webrtcService.isInCall && _incomingDialogVisible) {
+      _closeIncomingDialog();
+    }
+
+    if (webrtcService.callerInfo == null && _incomingDialogVisible) {
+      _closeIncomingDialog();
+    }
+
+    // Show incoming call dialog when a call arrives
+    if (webrtcService.callerInfo != null && !webrtcService.isInCall && !_incomingDialogVisible) {
+      _incomingDialogVisible = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          _incomingDialogVisible = false;
+          _incomingDialogContext = null;
+          return;
+        }
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          useRootNavigator: true,
+          builder: (dialogContext) {
+            _incomingDialogContext = dialogContext;
+            return const IncomingCallDialog();
+          },
+        ).whenComplete(() {
+          _incomingDialogVisible = false;
+          _incomingDialogContext = null;
+        });
+      });
+    }
+
+    if (webrtcService.isInCall && !_callScreenOpen) {
+      _callScreenOpen = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) {
+          _callScreenOpen = false;
+          return;
+        }
+        final navigator = Navigator.of(context, rootNavigator: true);
+        await navigator.push(MaterialPageRoute(builder: (_) => const VideoCallScreen()));
+        if (mounted) {
+          setState(() {
+            _callScreenOpen = false;
+          });
+        } else {
+          _callScreenOpen = false;
+        }
+      });
+    } else if (!webrtcService.isInCall && _callScreenOpen) {
+      _callScreenOpen = false;
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {

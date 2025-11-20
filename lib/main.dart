@@ -11,17 +11,23 @@ import 'services/auth_service.dart';
 import 'services/call_service.dart';
 import 'services/announcement_service.dart';
 import 'services/child_history_service.dart';
+import 'services/webrtc_service.dart';
+import 'services/app_config_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const ParentApp());
+  final appConfigService = AppConfigService();
+  await appConfigService.initialize();
+  runApp(ParentApp(appConfigService: appConfigService));
 }
 
 class ParentApp extends StatelessWidget {
-  const ParentApp({super.key});
+  const ParentApp({super.key, required this.appConfigService});
+
+  final AppConfigService appConfigService;
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +39,8 @@ class ParentApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CallStatusService()),
         ChangeNotifierProvider(create: (_) => AnnouncementService()),
         Provider(create: (_) => ChildHistoryService()),
+        ChangeNotifierProvider(create: (_) => WebRTCService()),
+        ChangeNotifierProvider.value(value: appConfigService),
       ],
       child: Consumer<ParentAuthService>(
         builder: (context, auth, _) {
