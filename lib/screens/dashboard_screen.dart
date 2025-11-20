@@ -122,21 +122,6 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
     _incomingDialogContext = null;
   }
 
-  void _closeIncomingDialog() {
-    if (!_incomingDialogVisible) {
-      return;
-    }
-    final dialogContext = _incomingDialogContext;
-    if (dialogContext != null) {
-      final navigator = Navigator.of(dialogContext, rootNavigator: true);
-      if (navigator.canPop()) {
-        navigator.pop();
-      }
-    }
-    _incomingDialogVisible = false;
-    _incomingDialogContext = null;
-  }
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
