@@ -24,13 +24,103 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingObserver {
   bool _initialized = false;
   int _selectedIndex = 0;
   _AlertFilter _alertFilter = _AlertFilter.active;
   bool _callScreenOpen = false;
   bool _incomingDialogVisible = false;
   BuildContext? _incomingDialogContext;
+  bool? _currentPresenceOnline;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _setParentPresence(false);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final authService = context.read<ParentAuthService>();
+    if (authService.currentUser == null) {
+      return;
+    }
+
+    if (state == AppLifecycleState.resumed) {
+      _setParentPresence(true);
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      _setParentPresence(false);
+    }
+  }
+
+  Future<void> _setParentPresence(bool online, {bool force = false}) async {
+    if (!mounted) {
+      return;
+    }
+
+    final authService = context.read<ParentAuthService>();
+    if (authService.currentUser == null) {
+      return;
+    }
+
+    if (!force && _currentPresenceOnline == online) {
+      return;
+    }
+    _currentPresenceOnline = online;
+
+    final firestore = FirebaseFirestore.instance;
+    final parentId = authService.currentUser!.uid;
+    final parentName = authService.currentUser!.displayName ?? 'Parent';
+
+    await firestore.collection('users').doc(parentId).set({
+      'isOnline': online,
+      'online': online,
+      'lastSeen': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    final parentService = context.read<ParentService>();
+    final childIds = parentService.children.map((child) => child.id).whereType<String>().toList();
+
+    if (childIds.isEmpty) {
+      return;
+    }
+
+    await Future.wait(childIds.map((childId) {
+      final docRef = firestore.collection('users').doc(childId);
+      return docRef.set({
+        'parentPresence.$parentId': {
+          'online': online,
+          'parentName': parentName,
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+        'parentOnlineIds': online
+            ? FieldValue.arrayUnion([parentId])
+            : FieldValue.arrayRemove([parentId]),
+      }, SetOptions(merge: true));
+    }));
+  }
+
+  void _closeIncomingDialog() {
+    if (!_incomingDialogVisible) {
+      return;
+    }
+    final dialogContext = _incomingDialogContext;
+    if (dialogContext != null) {
+      final navigator = Navigator.of(dialogContext, rootNavigator: true);
+      if (navigator.canPop()) {
+        navigator.pop();
+      }
+    }
+    _incomingDialogVisible = false;
+    _incomingDialogContext = null;
+  }
 
   void _closeIncomingDialog() {
     if (!_incomingDialogVisible) {
@@ -68,6 +158,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (!mounted) return;
           callService.startListening();
           announcementService.loadAnnouncements();
+          await _setParentPresence(true, force: true);
 
           // Initialize WebRTC service for incoming calls
           final user = authService.currentUser;
